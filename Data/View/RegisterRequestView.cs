@@ -1,6 +1,6 @@
-﻿namespace Data.Dto
+﻿namespace Domain.View
 {
-    public class RegisterRequestDTO
+    public class RegisterRequestView
     {
         public string UserName { get; set; }
         public string Name { get; set; }

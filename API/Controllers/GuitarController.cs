@@ -1,8 +1,6 @@
-﻿using Data.DbContext;
-using Data.Dto;
-using Data.Models;
+﻿using Services.Core.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using System.Net;
+using Domain.Models;
 
 namespace API.Controllers
 {
@@ -10,160 +8,127 @@ namespace API.Controllers
     [ApiController]
     public class GuitarController : ControllerBase
     {
-        private readonly ApplicationDbContext _db;
-        private ApiResponse _response;
-        public GuitarController(ApplicationDbContext db)
+        private readonly IGuitarService _guitarService;
+        public GuitarController(IGuitarService guitarService)
         {
-            _db = db;
-            _response = new ApiResponse();
+            _guitarService = guitarService;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetGuitars()
         {
-            _response.Result = _db.Guitars;
-            _response.StatusCode = HttpStatusCode.OK;
-            return Ok(_response);
+            var response = new ApiResponse();
+            try
+            {
+                var guitars = await _guitarService.GetGuitars();
+                response.IsSuccess = true;
+                response.Result = guitars;
+                return Ok(response);
+
+            } catch (Exception ex)
+            {
+                response.IsSuccess = false;
+                return BadRequest(response);
+            }
         }
 
         [HttpGet("{id:int}", Name = "GetGuitar")]
         public async Task<IActionResult> GetGuitar(int id)
         {
+            var response = new ApiResponse();
             if (id == 0)
             {
-                _response.StatusCode = HttpStatusCode.BadRequest;
-                _response.IsSuccess = false;
-                return BadRequest(_response);
+                response.IsSuccess = false;
+                return BadRequest(response);
             }
-            Guitar guitarItem = _db.Guitars.FirstOrDefault(u => u.Id == id);
+
+            Guitar guitarItem = await _guitarService.GetGuitar(id);
             if (guitarItem == null)
             {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                _response.IsSuccess = false;
-                return NotFound(_response);
+                response.IsSuccess = false;
+                return NotFound(response);
             }
-            _response.Result = guitarItem;
-            _response.StatusCode = HttpStatusCode.OK;
-            return Ok(_response);
+            response.Result = guitarItem;
+
+            return Ok(response);
         }
 
         [HttpPost]
-        public async Task<ActionResult<ApiResponse>> CreateGuitar([FromForm] GuitarCreateDto guitarCreateDto)
+        public async Task<IActionResult> CreateGuitar([FromForm] Guitar guitar)
         {
+            var response = new ApiResponse();
             try
             {
                 if (ModelState.IsValid)
                 {
-                    Guitar guitarItemToCreate = new()
-                    {
-                        Name = guitarCreateDto.Name,
-                        Price = guitarCreateDto.Price,
-                        Category = guitarCreateDto.Category,
-                        Description = guitarCreateDto.Description,
-                    };
-                    _db.Guitars.Add(guitarItemToCreate);
-                    _db.SaveChanges();
-                    _response.Result = guitarItemToCreate;
-                    _response.StatusCode = HttpStatusCode.Created;
-                    return CreatedAtRoute("GetGuitar", new { id = guitarItemToCreate.Id }, _response);
-
+                    await _guitarService.CreateGuitar(guitar);
+                    response.Result = guitar;
+                    return CreatedAtRoute("GetGuitar", new { id = guitar.Id }, response);
                 }
                 else
                 {
-                    _response.IsSuccess = false;
+                    response.IsSuccess = false;
+                    return BadRequest(response);
                 }
             }
             catch (Exception ex)
             {
-                _response.IsSuccess = false;
-                _response.ErrorMessages
-                     = new List<string>() { ex.ToString() };
+                response.IsSuccess = false;
+                response.ErrorMessages = new List<string>() { ex.ToString() };
+                return BadRequest(response);
             }
 
-            return _response;
         }
 
         [HttpPut("{id:int}")]
-        public async Task<ActionResult<ApiResponse>> UpdateGuitar(int id, [FromForm] GuitarUpdateDto guitarUpdateDto)
+        public async Task<IActionResult> UpdateGuitar(int id, [FromForm] Guitar guitar)
         {
+            var response = new ApiResponse();
             try
             {
                 if (ModelState.IsValid)
                 {
-                    if (guitarUpdateDto == null || id != guitarUpdateDto.Id)
+                    if (guitar == null || id != guitar.Id)
                     {
-                        _response.StatusCode = HttpStatusCode.BadRequest;
-                        _response.IsSuccess = false;
+                        response.IsSuccess = false;
                         return BadRequest();
                     }
 
-                    Guitar guitarItemFromDb = await _db.Guitars.FindAsync(id);
-                    if (guitarItemFromDb == null)
-                    {
-                        _response.StatusCode = HttpStatusCode.BadRequest;
-                        _response.IsSuccess = false;
-                        return BadRequest();
-                    }
-
-                    guitarItemFromDb.Name = guitarUpdateDto.Name;
-                    guitarItemFromDb.Price = guitarUpdateDto.Price;
-                    guitarItemFromDb.Category = guitarUpdateDto.Category;
-                    guitarItemFromDb.Description = guitarUpdateDto.Description;
-
-                    _db.Guitars.Update(guitarItemFromDb);
-                    _db.SaveChanges();
-                    _response.StatusCode = HttpStatusCode.NoContent;
-                    return Ok(_response);
+                    await _guitarService.UpdateGuitar(id, guitar);
+                    return Ok(response);
                 }
                 else
                 {
-                    _response.IsSuccess = false;
+                    response.IsSuccess = false;
+                    return BadRequest(response);
                 }
             }
             catch (Exception ex)
             {
-                _response.IsSuccess = false;
-                _response.ErrorMessages
-                     = new List<string>() { ex.ToString() };
+                response.IsSuccess = false;
+                response.ErrorMessages = new List<string>() { ex.ToString() };
+                return BadRequest(response);
             }
-
-            return _response;
         }
 
 
         [HttpDelete("{id:int}")]
-        public async Task<ActionResult<ApiResponse>> DeleteGuitar(int id)
+        public async Task<ActionResult> DeleteGuitar(int id)
         {
+            var response = new ApiResponse();
             try
             {
-                if (id == 0)
-                {
-                    _response.StatusCode = HttpStatusCode.BadRequest;
-                    _response.IsSuccess = false;
-                    return BadRequest();
-                }
-
-                Guitar guitarItemFromDb = await _db.Guitars.FindAsync(id);
-                if (guitarItemFromDb == null)
-                {
-                    _response.StatusCode = HttpStatusCode.BadRequest;
-                    _response.IsSuccess = false;
-                    return BadRequest();
-                }
-
-                _db.Guitars.Remove(guitarItemFromDb);
-                _db.SaveChanges();
-                _response.StatusCode = HttpStatusCode.NoContent;
-                return Ok(_response);
+                await _guitarService.DeleteGuitar(id);
+                response.IsSuccess = false;
+                return Ok(response);
             }
             catch (Exception ex)
             {
-                _response.IsSuccess = false;
-                _response.ErrorMessages
-                     = new List<string>() { ex.ToString() };
+                response.IsSuccess = false;
+                response.ErrorMessages = new List<string>() { ex.ToString() };
+                return BadRequest(response);
             }
 
-            return _response;
         }
     }
 }

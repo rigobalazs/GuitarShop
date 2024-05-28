@@ -1,10 +1,12 @@
-using Data.DbContext;
-using Data.Models;
+using Domain.Models;
+using Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Services.Application.Services;
+using Services.Core.Interfaces;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +18,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 });
 builder.Configuration.GetConnectionString("DefaultDbConnection");
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>().AddEntityFrameworkStores<ApplicationDbContext>();
+builder.Services.AddScoped<IGuitarService, GuitarService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 builder.Services.Configure<IdentityOptions>(options =>
 {

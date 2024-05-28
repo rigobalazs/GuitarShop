@@ -1,6 +1,6 @@
-﻿namespace Data.Dto
+﻿namespace Domain.View
 {
-    public class LoginResponseDTO
+    public class LoginResponseView
     {
         public string Email { get; set; }
         public string Token { get; set; }
